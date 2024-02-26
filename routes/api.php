@@ -13,10 +13,16 @@ use Illuminate\Support\Facades\Route;
 | is assigned the "api" middleware group. Enjoy building your API!
 |
 */
+
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\FileController;
+
 
 Route::post('/authorization', [UserController::class, 'login']);
 Route::post('/registration', [UserController::class, 'reg']);
+
+Route::post('/files', [FileController::class, 'addFiles']);
+Route::post('/files/{file_id}/accesses', [FileController::class, 'addAccess']);
 
 
 //    Status: 403

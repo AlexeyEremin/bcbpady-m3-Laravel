@@ -12,12 +12,14 @@ return new class extends Migration {
    */
   public function up()
   {
-    Schema::create('files', function (Blueprint $table) {
+    Schema::create('accesses', function (Blueprint $table) {
       $table->id();
       $table->unsignedBigInteger('user_id');
-      $table->string('path');
-      $table->string('name');
+      $table->unsignedBigInteger('file_id');
       $table->timestamps();
+
+      $table->foreign('user_id')->references('id')->on('users');
+      $table->foreign('file_id')->references('id')->on('files');
     });
   }
 
@@ -28,6 +30,6 @@ return new class extends Migration {
    */
   public function down()
   {
-    Schema::dropIfExists('files');
+    Schema::dropIfExists('accesses');
   }
 };
