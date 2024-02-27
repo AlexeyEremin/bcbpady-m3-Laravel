@@ -214,4 +214,37 @@ class FileController extends Controller
     }
     return response($res);
   }
+
+  public
+  function getDisk(Request $request)
+  {
+    $res = [];
+    $user = $this->getUser($request);
+    $files = File::where('user_id', $user->id)
+      ->get();
+    foreach ($files as $file) {
+      $accesses = Access::where('file_id', $file->id)
+        ->get();
+      $coAuthors = [];
+      foreach ($accesses as $access) {
+        $coAuthor = User::all()
+          ->where('id', $access->user_id)
+          ->first();
+        $coAuthors[] = [
+          "fullname" => ($coAuthor->first_name . " " . $coAuthor->last_name),
+          "email" => $coAuthor->email,
+          "type" => "co-author"
+        ];
+      }
+      $file_id = pathinfo($file->path, PATHINFO_FILENAME);
+      $res[] = [
+        "file_id" => $file_id,
+        "name" => $file->name,
+        "url" => (env('APP_URL') . 'files/' . $file_id),
+        "accesses" => $coAuthors,
+      ];
+    }
+
+    return response($res);
+  }
 }
