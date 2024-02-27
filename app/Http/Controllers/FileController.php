@@ -6,6 +6,7 @@ use App\Models\Access;
 use App\Models\File;
 use App\Models\User;
 use Illuminate\Http\Request;
+use App\Http\Requests\AccessRequest;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
@@ -103,31 +104,112 @@ class FileController extends Controller
   public function addAccess($file_id, AccessRequest $request)
   {
     $user = $this->getUser($request);
-    $file = File::where('path', ("file/" . $file_id . "%"))
-      ->first();
-    $res = [
-      "fullname" => $user->first_name . " " . $user->last_name,
+    $res[] = [
+      "fullname" => ($user->first_name . " " . $user->last_name),
       "email" => $user->email,
-      "type" => "author",
+      "type" => "author"
     ];
-    $coAuthor = User::where('email', $request->email);
+    $file = File::where('path', 'like', ("file/" . $file_id . "%"))
+      ->first();
+    if (!$file) {
+      return response([
+        "message" => "Not found"
+      ], 404);
+    }
+    if ($file->user_id != $user->id) {
+      return response([
+        "message" => "Forbidden for you"
+      ], 403);
+    }
+    if ($request->email != $user->email) {
+      $coAuthor = User::all()
+        ->where('email', $request->email)
+        ->first();
+      if (!$coAuthor) {
+        return response([
+          "message" => "Not found"
+        ], 404);
+      }
+      $access = Access::where('user_id', $coAuthor->id)
+        ->where('file_id', $file->id)
+        ->first();
+      if (!$access) {
+        $access = new Access();
+        $access->user_id = $coAuthor->id;
+        $access->file_id = $file->id;
+        $access->save();
+      }
+    }
+    $accesses = Access::where('file_id', $file->id)
+      ->get();
+
+    foreach ($accesses as $access) {
+      $coAuthor = User::all()
+        ->where('id', $access->user_id)
+        ->first();
+      $res[] = [
+        "fullname" => ($coAuthor->first_name . " " . $coAuthor->last_name),
+        "email" => $coAuthor->email,
+        "type" => "co-author"
+      ];
+    }
+    return response($res);
+  }
+
+  public
+  function deleteAccess($file_id, AccessRequest $request)
+  {
+    $user = $this->getUser($request);
+    $res[] = [
+      "fullname" => ($user->first_name . " " . $user->last_name),
+      "email" => $user->email,
+      "type" => "author"
+    ];
+    $file = File::where('path', 'like', ("file/" . $file_id . "%"))
+      ->first();
+    if (!$file) {
+      return response([
+        "message" => "Not found"
+      ], 404);
+    }
+    if ($request->email == $user->email) {
+      return response([
+        "message" => "Forbidden for you"
+      ], 403);
+    }
+    if ($file->user_id != $user->id) {
+      return response([
+        "message" => "Forbidden for you"
+      ], 403);
+    }
+    $coAuthor = User::all()
+      ->where('email', $request->email)
+      ->first();
+    if (!$coAuthor) {
+      return response([
+        "message" => "Not found"
+      ], 404);
+    }
     $access = Access::where('user_id', $coAuthor->id)
       ->where('file_id', $file->id)
       ->first();
     if (!$access) {
-      $access = new Access();
-      $access->user_id = $coAuthor->id;
-      $access->file_id = $file->id;
-      $access->save();
+      return response([
+        "message" => "Not found"
+      ], 404);
     }
+    $access->delete();
     $accesses = Access::where('file_id', $file->id)
       ->get();
+
     foreach ($accesses as $access) {
-      $coAuthor = User::where('id', $access->id);
+      $coAuthor = User::all()
+        ->where('id', $access->user_id)
+        ->first();
       $res[] = [
-        "fullname" => $coAuthor->first_name . " " . $coAuthor->last_name,
+        "fullname" => ($coAuthor->first_name . " " . $coAuthor->last_name),
         "email" => $coAuthor->email,
-        "type" => "co-author",
+        "type" => "co-author"
       ];
     }
     return response($res);

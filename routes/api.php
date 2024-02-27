@@ -23,6 +23,7 @@ Route::post('/registration', [UserController::class, 'reg']);
 
 Route::post('/files', [FileController::class, 'addFiles']);
 Route::post('/files/{file_id}/accesses', [FileController::class, 'addAccess']);
+Route::delete('/files/{file_id}/accesses', [FileController::class, 'deleteAccess']);
 
 
 //    Status: 403

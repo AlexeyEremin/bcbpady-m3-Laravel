@@ -18,6 +18,8 @@ return new class extends Migration {
       $table->string('path');
       $table->string('name');
       $table->timestamps();
+
+      $table->foreign('user_id')->references('id')->on('users');
     });
   }
 

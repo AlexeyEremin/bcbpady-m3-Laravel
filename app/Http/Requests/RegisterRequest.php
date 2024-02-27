@@ -29,18 +29,4 @@ class RegisterRequest extends FormRequest
     return [
       "first_name" => "required",
       "last_name" => "required",
-      "email" => "required|email|unique:users",
-      "password" => "required",
-    ];
-  }
-
-  protected function failedValidation(Validator $validator)
-  {
-    $errors = $validator->errors()->toArray();
-    $response = new JsonResponse([
-      'success' => false,
-      'message' => $errors,
-    ], 422);
-    throw new HttpResponseException($response);
-  }
-}
+      "email" => "required
