@@ -25,6 +25,7 @@ Route::post('/files', [FileController::class, 'addFiles']);
 Route::post('/files/{file_id}/accesses', [FileController::class, 'addAccess']);
 Route::delete('/files/{file_id}/accesses', [FileController::class, 'deleteAccess']);
 Route::get('/files/disk', [FileController::class, 'getDisk']);
+Route::get('/shared', [FileController::class, 'getShared']);
 
 
 //    Status: 403

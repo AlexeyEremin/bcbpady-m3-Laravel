@@ -215,8 +215,7 @@ class FileController extends Controller
     return response($res);
   }
 
-  public
-  function getDisk(Request $request)
+  public function getDisk(Request $request)
   {
     $res = [];
     $user = $this->getUser($request);
@@ -242,6 +241,26 @@ class FileController extends Controller
         "name" => $file->name,
         "url" => (env('APP_URL') . 'files/' . $file_id),
         "accesses" => $coAuthors,
+      ];
+    }
+
+    return response($res);
+  }
+
+  public function getShared(Request $request)
+  {
+    $res = [];
+    $user = $this->getUser($request);
+    $accesses = Access::where('user_id', $user->id)
+      ->get();
+    foreach ($accesses as $access) {
+      $file = File::where('id', $access->file_id)
+        ->first();
+      $file_id = pathinfo($file->path, PATHINFO_FILENAME);
+      $res[] = [
+        "file_id" => $file_id,
+        "name" => $file->name,
+        "url" => (env('APP_URL') . 'files/' . $file_id),
       ];
     }
 
