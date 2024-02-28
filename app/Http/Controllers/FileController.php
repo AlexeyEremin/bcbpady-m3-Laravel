@@ -2,6 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Resources\AccessResource;
+use App\Http\Resources\FileResource;
+use App\Http\Resources\GetFileResource;
 use App\Models\Access;
 use App\Models\File;
 use App\Models\User;
@@ -12,28 +15,12 @@ use Illuminate\Support\Str;
 
 class FileController extends Controller
 {
-  public function getUser($request)
-  {
-    $token = $request->header('Authorization');
-    $token = str_replace('Bearer ', '', $token);
-    $user = User::where('api_token', $token)
-      ->first();
-    if (!$user) {
-      return response([
-        "success" => false,
-        "message" => "Login failed",
-      ], 401);
-    }
-    return $user;
-  }
-
   public function addFiles(Request $request)
   {
-    $user = $this->getUser($request);
+    $user = auth()->user();
     $files = $request->allFiles();
 
     foreach ($files as $file) {
-
       $name = $file->getClientOriginalName();
       $fileSize = $file->getSize();
 
@@ -64,7 +51,7 @@ class FileController extends Controller
           }
         }
 
-        for (; ;) {
+        for (; ; ) {
           $randomName = Str::random(10);
           $fileСompare = File::all()
             ->where('pash', ("file/" . $randomName . '.' . $fileExtension))
@@ -82,20 +69,18 @@ class FileController extends Controller
         $file->name = ($fileName . '.' . $fileExtension);
         $file->save();
 
-        $res[] = [
+        $res[] = new FileResource([
           "success" => true,
-          "message" => "Success",
-          "name" => ($fileName . '.' . $fileExtension),
-          "url" => env('APP_URL') . "files/" . $name,
-          "file_id" => $randomName,
-        ];
+          'file' => $file
+        ]);
+
       } else {
-        $res[] = [
+        $file = [];
+        $file['name'] = $name;
+        $res[] = new FileResource([
           "success" => false,
-          "message" => "File not loaded",
-          "name" => $name,
-          "url" => env('APP_URL') . "files/" . $name
-        ];
+          'file' => $file
+        ]);
       }
     }
     return response($res);
@@ -103,12 +88,7 @@ class FileController extends Controller
 
   public function addAccess($file_id, AccessRequest $request)
   {
-    $user = $this->getUser($request);
-    $res[] = [
-      "fullname" => ($user->first_name . " " . $user->last_name),
-      "email" => $user->email,
-      "type" => "author"
-    ];
+    $user = auth()->user();
     $file = File::where('path', 'like', ("file/" . $file_id . "%"))
       ->first();
     if (!$file) {
@@ -141,30 +121,22 @@ class FileController extends Controller
       }
     }
     $accesses = Access::where('file_id', $file->id)
+      ->with('user')
+      ->with('file')
       ->get();
-
-    foreach ($accesses as $access) {
-      $coAuthor = User::all()
-        ->where('id', $access->user_id)
-        ->first();
-      $res[] = [
-        "fullname" => ($coAuthor->first_name . " " . $coAuthor->last_name),
-        "email" => $coAuthor->email,
-        "type" => "co-author"
-      ];
-    }
+    $res = new AccessResource([
+      'accesses' => $accesses,
+      'user' => $user,
+    ]);
     return response($res);
   }
 
   public
-  function deleteAccess($file_id, AccessRequest $request)
-  {
-    $user = $this->getUser($request);
-    $res[] = [
-      "fullname" => ($user->first_name . " " . $user->last_name),
-      "email" => $user->email,
-      "type" => "author"
-    ];
+    function deleteAccess(
+    $file_id,
+    AccessRequest $request
+  ) {
+    $user = auth()->user();
     $file = File::where('path', 'like', ("file/" . $file_id . "%"))
       ->first();
     if (!$file) {
@@ -200,70 +172,49 @@ class FileController extends Controller
     }
     $access->delete();
     $accesses = Access::where('file_id', $file->id)
+      ->with('user')
+      ->with('file')
       ->get();
-
-    foreach ($accesses as $access) {
-      $coAuthor = User::all()
-        ->where('id', $access->user_id)
-        ->first();
-      $res[] = [
-        "fullname" => ($coAuthor->first_name . " " . $coAuthor->last_name),
-        "email" => $coAuthor->email,
-        "type" => "co-author"
-      ];
-    }
+    $res = new AccessResource([
+      'accesses' => $accesses,
+      'user' => $user,
+    ]);
     return response($res);
   }
 
   public function getDisk(Request $request)
   {
     $res = [];
-    $user = $this->getUser($request);
+    $user = auth()->user();
     $files = File::where('user_id', $user->id)
       ->get();
     foreach ($files as $file) {
       $accesses = Access::where('file_id', $file->id)
+        ->with('user')
+        ->with('file')
         ->get();
-      $coAuthors = [];
-      foreach ($accesses as $access) {
-        $coAuthor = User::all()
-          ->where('id', $access->user_id)
-          ->first();
-        $coAuthors[] = [
-          "fullname" => ($coAuthor->first_name . " " . $coAuthor->last_name),
-          "email" => $coAuthor->email,
-          "type" => "co-author"
-        ];
-      }
-      $file_id = pathinfo($file->path, PATHINFO_FILENAME);
-      $res[] = [
-        "file_id" => $file_id,
-        "name" => $file->name,
-        "url" => (env('APP_URL') . 'files/' . $file_id),
-        "accesses" => $coAuthors,
-      ];
+      $res[] = new GetFileResource([
+        'file' => $file,
+        'accesses' => $accesses,
+        'user' => $user,
+      ]);
     }
-
     return response($res);
   }
 
   public function getShared(Request $request)
   {
     $res = [];
-    $user = $this->getUser($request);
+    $user = auth()->user();
     $accesses = Access::where('user_id', $user->id)
       ->get();
     foreach ($accesses as $access) {
       $file = File::where('id', $access->file_id)
         ->first();
-      $file_id = pathinfo($file->path, PATHINFO_FILENAME);
-      $res[] = [
-        "file_id" => $file_id,
-        "name" => $file->name,
-        "url" => (env('APP_URL') . 'files/' . $file_id),
-      ];
+      $res[] = new GetFileResource([
+        'file' => $file,
+      ]);
     }
-
     return response($res);
   }
 }

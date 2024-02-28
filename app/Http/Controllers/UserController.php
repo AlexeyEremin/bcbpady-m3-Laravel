@@ -13,7 +13,7 @@ class UserController extends Controller
   public function reg(registerRequest $request)
   {
     $user = User::create($request->validated());
-    $user->api_token = (string)Str::uuid();
+    $user->api_token = (string) Str::uuid();
     $user->save();
 
     return response([
@@ -34,13 +34,24 @@ class UserController extends Controller
     }
 
     $user = auth()->user();
-    $user->api_token = (string)Str::uuid();
+    $user->api_token = (string) Str::uuid();
     $user->save();
 
     return response([
       "success" => true,
       "message" => "Success",
       "token" => $user->api_token
+    ]);
+  }
+  public function logout()
+  {
+    $user = auth()->user();
+    $user->api_token = '';
+    $user->save();
+
+    return response([
+      "success" => true,
+      "message" => "Logout",
     ]);
   }
 }
