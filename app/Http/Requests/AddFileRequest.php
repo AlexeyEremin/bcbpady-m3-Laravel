@@ -4,7 +4,7 @@ namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class RegisterRequest extends FormRequest
+class AddFileRequest extends FormRequest
 {
     use ValidationTrait;
     /**
@@ -24,11 +24,11 @@ class RegisterRequest extends FormRequest
      */
     public function rules()
     {
+        # mimes https://svn.apache.org/repos/asf/httpd/httpd/trunk/docs/conf/mime.types
+        # attributes validation max in size kilobytes
         return [
-            "first_name" => "required",
-            "last_name" => "required",
-            "email" => "required|email|unique:users",
-            "password" => "required",
+            'files' => 'required|array',
+            'files.*' => 'required|file|mimes:docx,pdf,doc,zip,jpeg,jpg,png|max:2048'
         ];
     }
 }

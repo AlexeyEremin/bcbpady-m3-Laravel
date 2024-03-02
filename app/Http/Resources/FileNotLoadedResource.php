@@ -3,9 +3,8 @@
 namespace App\Http\Resources;
 
 use Illuminate\Http\Resources\Json\JsonResource;
-use Mockery\Undefined;
 
-class GetFileResource extends JsonResource
+class FileNotLoadedResource extends JsonResource
 {
     /**
      * Transform the resource into an array.
@@ -16,10 +15,9 @@ class GetFileResource extends JsonResource
     public function toArray($request)
     {
         return [
-            'file_id' => $this->file_id,
-            'name' => $this->file->nameFile(),
-            'url' => env('APP_URL').'/files/'.$this->file-path,
-            'accesses' => AccessResource::collection($this->file->access)
+            'success' => false,
+            'message' => 'File not loaded',
+            'file' => $this->resource['fileName']
         ];
     }
 }

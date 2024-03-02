@@ -9,6 +9,9 @@ class Access extends Model
 {
     use HasFactory;
 
+    # Не забывай про Guarded везде в моделях
+    protected $guarded = ['id'];
+
     public function user()
     {
         return $this->belongsTo(User::class);

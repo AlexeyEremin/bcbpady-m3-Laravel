@@ -1,0 +1,51 @@
+version: '3'
+
+services:
+    nginx:
+        image: nginx:latest
+        volumes:
+            - ./:/var/www/
+            - ./_docker/nginx/conf.d/:/etc/nginx/conf.d/
+        ports:
+            - "9080:80"
+        restart: always
+        container_name: wsr2024_nginx
+        depends_on:
+            - app
+
+    app:
+        build:
+            context: .
+            dockerfile: _docker/app/Dockerfile
+        volumes:
+            - ./:/var/www/
+        restart: always
+        container_name: wsr2024
+        depends_on:
+            - db
+
+    db:
+        image: mysql:8.0
+        restart: always
+        env_file:
+            - .env
+        volumes:
+            - ./_docker_db/db:/var/lib/mysql
+        environment:
+            MYSQL_ROOT_PASSWORD: 'password123'
+            MYSQL_DATABASE: '${DB_DATABASE}'
+            MYSQL_USER: '${DB_USERNAME}'
+            MYSQL_PASSWORD: '${DB_PASSWORD}'
+        ports:
+            - "9002:3306"
+        command: mysqld --character-set-server=utf8 --collation-server=utf8_unicode_ci
+        container_name: wsr2024_db
+
+    adminer:
+        image: adminer
+        restart: always
+        container_name: wsr2024_adminer
+        depends_on:
+            - db
+        ports:
+            - 9003:8080

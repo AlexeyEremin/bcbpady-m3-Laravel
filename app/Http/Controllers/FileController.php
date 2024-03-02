@@ -1,220 +1,155 @@
 <?php
+/** и нажать ENTER
+ * перед методом, а после не большой свой комментарий сверху опиши
+ */
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\AddFileRequest;
 use App\Http\Resources\AccessResource;
+use App\Http\Resources\FileNotLoadedResource;
 use App\Http\Resources\FileResource;
 use App\Http\Resources\GetFileResource;
-use App\Models\Access;
+use App\Http\Resources\SharedResource;
 use App\Models\File;
 use App\Models\User;
 use Illuminate\Http\Request;
 use App\Http\Requests\AccessRequest;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 
 class FileController extends Controller
 {
-  public function addFiles(Request $request)
-  {
-    $user = auth()->user();
-    $files = $request->allFiles();
+    /**
+     * А что этот не дописал метод?
+     * @return \Symfony\Component\HttpFoundation\BinaryFileResponse
+     */
+    public function downloadFile(File $file)
+    {
+        $path = Storage::disk('public')->path($file->path);
 
-    foreach ($files as $file) {
-      $name = $file->getClientOriginalName();
-      $fileSize = $file->getSize();
+        return response()->download($path, basename($path));
+    }
 
-      $fileName = pathinfo($name, PATHINFO_FILENAME);
-      $fileExtension = pathinfo($name, PATHINFO_EXTENSION);
+    /**
+     * А что этот не дописал метод?
+     * @return \Illuminate\Contracts\Foundation\Application|\Illuminate\Contracts\Routing\ResponseFactory|\Illuminate\Http\Response
+     */
+    public function deleteFile(File $file)
+    {
+        $successSecurity = $file->access()->where(['user_id' => auth()->id(), 'author' => 1])->first();
 
-      if (
-        $fileSize > 1024 * 2
-        && ($fileExtension == "doc"
-          || $fileExtension == "pdf"
-          || $fileExtension == "docx"
-          || $fileExtension == "zip"
-          || $fileExtension == "jpeg"
-          || $fileExtension == "jpg"
-          || $fileExtension == "png"
-        )
-      ) {
-        $originalFileName = $fileName;
-        for ($i = 1; ; $i++) {
-          $fileСompare = File::all()
-            ->where('name', ($fileName . '.' . $fileExtension))
-            ->where('user_id', $user->id)
-            ->first();
-          if ($fileСompare) {
-            $fileName = $originalFileName . " ($i)";
-          } else {
-            break;
-          }
+        if (!$successSecurity) {
+            return response([
+                "message" => "Forbidden for you",
+            ], 403);
         }
 
-        for (; ; ) {
-          $randomName = Str::random(10);
-          $fileСompare = File::all()
-            ->where('pash', ("file/" . $randomName . '.' . $fileExtension))
-            ->first();
-          if (!$fileСompare) {
-            break;
-          }
-        }
+        $file->delete();
 
-        $path = $file->storeAs('file', $randomName . '.' . $fileExtension);
-
-        $file = new File();
-        $file->user_id = $user->id;
-        $file->path = $path;
-        $file->name = ($fileName . '.' . $fileExtension);
-        $file->save();
-
-        $res[] = new FileResource([
-          "success" => true,
-          'file' => $file
-        ]);
-
-      } else {
-        $file = [];
-        $file['name'] = $name;
-        $res[] = new FileResource([
-          "success" => false,
-          'file' => $file
-        ]);
-      }
-    }
-    return response($res);
-  }
-
-  public function addAccess($file_id, AccessRequest $request)
-  {
-    $user = auth()->user();
-    $file = File::where('path', 'like', ("file/" . $file_id . "%"))
-      ->first();
-    if (!$file) {
-      return response([
-        "message" => "Not found"
-      ], 404);
-    }
-    if ($file->user_id != $user->id) {
-      return response([
-        "message" => "Forbidden for you"
-      ], 403);
-    }
-    if ($request->email != $user->email) {
-      $coAuthor = User::all()
-        ->where('email', $request->email)
-        ->first();
-      if (!$coAuthor) {
         return response([
-          "message" => "Not found"
-        ], 404);
-      }
-      $access = Access::where('user_id', $coAuthor->id)
-        ->where('file_id', $file->id)
-        ->first();
-      if (!$access) {
-        $access = new Access();
-        $access->user_id = $coAuthor->id;
-        $access->file_id = $file->id;
-        $access->save();
-      }
+            'success' => true,
+            'message' => 'File already deleted'
+        ]);
     }
-    $accesses = Access::where('file_id', $file->id)
-      ->with('user')
-      ->with('file')
-      ->get();
-    $res = new AccessResource([
-      'accesses' => $accesses,
-      'user' => $user,
-    ]);
-    return response($res);
-  }
+    /**
+     * Добавления файлов
+     * @param  Request  $request
+     * @return \Illuminate\Contracts\Foundation\Application|\Illuminate\Contracts\Routing\ResponseFactory|\Illuminate\Http\Response
+     */
+    /*
+     * Смотри я добавил новый Request, посмотри его логику валидации
+     */
+    public function addFiles(AddFileRequest $request)
+    {
+        $user = auth()->user();
+        $files = $request->file('files');
 
-  public
-    function deleteAccess(
-    $file_id,
-    AccessRequest $request
-  ) {
-    $user = auth()->user();
-    $file = File::where('path', 'like', ("file/" . $file_id . "%"))
-      ->first();
-    if (!$file) {
-      return response([
-        "message" => "Not found"
-      ], 404);
-    }
-    if ($request->email == $user->email) {
-      return response([
-        "message" => "Forbidden for you"
-      ], 403);
-    }
-    if ($file->user_id != $user->id) {
-      return response([
-        "message" => "Forbidden for you"
-      ], 403);
-    }
-    $coAuthor = User::all()
-      ->where('email', $request->email)
-      ->first();
-    if (!$coAuthor) {
-      return response([
-        "message" => "Not found"
-      ], 404);
-    }
-    $access = Access::where('user_id', $coAuthor->id)
-      ->where('file_id', $file->id)
-      ->first();
-    if (!$access) {
-      return response([
-        "message" => "Not found"
-      ], 404);
-    }
-    $access->delete();
-    $accesses = Access::where('file_id', $file->id)
-      ->with('user')
-      ->with('file')
-      ->get();
-    $res = new AccessResource([
-      'accesses' => $accesses,
-      'user' => $user,
-    ]);
-    return response($res);
-  }
+        foreach ($files as $file) {
+            $name = $file->getClientOriginalName();
 
-  public function getDisk(Request $request)
-  {
-    $res = [];
-    $user = auth()->user();
-    $files = File::where('user_id', $user->id)
-      ->get();
-    foreach ($files as $file) {
-      $accesses = Access::where('file_id', $file->id)
-        ->with('user')
-        ->with('file')
-        ->get();
-      $res[] = new GetFileResource([
-        'file' => $file,
-        'accesses' => $accesses,
-        'user' => $user,
-      ]);
-    }
-    return response($res);
-  }
+            $fileName = pathinfo($name, PATHINFO_FILENAME);
+            $fileExtension = pathinfo($name, PATHINFO_EXTENSION);
 
-  public function getShared(Request $request)
-  {
-    $res = [];
-    $user = auth()->user();
-    $accesses = Access::where('user_id', $user->id)
-      ->get();
-    foreach ($accesses as $access) {
-      $file = File::where('id', $access->file_id)
-        ->first();
-      $res[] = new GetFileResource([
-        'file' => $file,
-      ]);
+            $existFile = $user->files()->where([
+                ['name', 'LIKE', $fileName],
+                ['type', 'LIKE', $fileExtension],
+            ])->orderByDesc('version')->first();
+            $version = $existFile ? ['version' => $existFile->version + 1] : [];
+
+            $path = $file->store('public');
+            if ($path) {
+                # Убираем под папки
+                $path = explode('/', $path);
+                # Получаем последние значение это название нашего файла
+                $path = $path[count($path) - 1];
+
+                $createFile = File::create(
+                    [
+                        'path' => $path,
+                        'name' => $existFile->name ?? $fileName,
+                        'type' => $existFile->type ?? $fileExtension,
+                    ] + $version
+                );
+
+                $createFile->access()->create(['author' => true, 'user_id' => $user->id]);
+
+                $res[] = new FileResource([
+                    "fileName" => $createFile->nameFile(),
+                    "url" => $path,
+                    "file_id" => $createFile->id,
+                ]);
+            } else {
+                $res[] = new FileNotLoadedResource([
+                    'fileName' => $file->getClientOriginalName(),
+                ]);
+            }
+        }
+
+        return response($res);
     }
-    return response($res);
-  }
+
+    /**
+     * Выдаем права на файл
+     * @param  File           $file
+     * @param  AccessRequest  $request
+     * @return \Illuminate\Contracts\Foundation\Application|\Illuminate\Contracts\Routing\ResponseFactory|\Illuminate\Http\Response
+     */
+    public function addAccess(File $file, AccessRequest $request)
+    {
+        $userCoAuthor = User::where('email', $request->email)->first();
+        $file->access()->updateOrCreate([
+            'user_id' => $userCoAuthor->id,
+        ]);
+
+        return response(AccessResource::collection($file->access));
+    }
+
+    public function deleteAccess(File $file, AccessRequest $request)
+    {
+        $coAuthor = User::where('email', $request->email)->first();
+        $access = $file->access()->where(['user_id' => $coAuthor->id, 'author' => 0])->first();
+
+        if (!$access) {
+            return response([
+                "message" => "Not found",
+            ], 404);
+        }
+        $access->delete();
+
+        return response(AccessResource::collection($file->access));
+    }
+
+    public function getDisk()
+    {
+        $fileAccess = auth()->user()->access;
+
+        return response(GetFileResource::collection($fileAccess));
+    }
+
+    public function getShared()
+    {
+        $fileNotAuthor = auth()->user()->access()->where('author', 0)->get();
+
+        return response(SharedResource::collection($fileNotAuthor));
+    }
 }

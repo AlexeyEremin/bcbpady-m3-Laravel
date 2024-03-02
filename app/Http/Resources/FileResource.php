@@ -14,15 +14,12 @@ class FileResource extends JsonResource
      */
     public function toArray($request)
     {
-        $res = [
-            'success' => $this->resource['success'],
-            'message' => $this->resource['success'] ? 'Success' : 'File not loaded',
-            'name' => $this->resource['file']['name'],
+        return [
+            'success' => true,
+            'message' => 'Success',
+            'name' => $this->resource['fileName'],
+            'url' => env('APP_URL') . '/files/' . $this->resource['url'],
+            'file_id' => $this->resource['file_id'],
         ];
-        if ($this->resource['success']) {
-            $res['url'] = env('APP_URL') . 'files/' . $this->resource['file']['id'];
-            $res['file_id'] = $this->resource['file']['id'];
-        }
-        return $res;
     }
 }

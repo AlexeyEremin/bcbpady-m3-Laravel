@@ -3,9 +3,8 @@
 namespace App\Http\Resources;
 
 use Illuminate\Http\Resources\Json\JsonResource;
-use Mockery\Undefined;
 
-class GetFileResource extends JsonResource
+class SharedResource extends JsonResource
 {
     /**
      * Transform the resource into an array.
@@ -18,8 +17,7 @@ class GetFileResource extends JsonResource
         return [
             'file_id' => $this->file_id,
             'name' => $this->file->nameFile(),
-            'url' => env('APP_URL').'/files/'.$this->file-path,
-            'accesses' => AccessResource::collection($this->file->access)
+            'url' => env('APP_URL') . '/files/' . $this->file->path
         ];
     }
 }

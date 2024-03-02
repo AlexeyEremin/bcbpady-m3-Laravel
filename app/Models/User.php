@@ -33,4 +33,23 @@ class User extends Authenticatable
     {
         $this->attributes['password'] = Hash::make($value);
     }
+
+    /**
+     * Возвращаем список принадлежащих нам файлов через Access таблицу
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany
+     */
+    public function files()
+    {
+        return $this->belongsToMany(File::class,'accesses')->where('author', 1);
+    }
+
+    public function access()
+    {
+        return $this->hasMany(Access::class);
+    }
+
+    public function fullname()
+    {
+        return $this->first_name . ' ' . $this->last_name;
+    }
 }

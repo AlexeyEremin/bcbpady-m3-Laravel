@@ -14,24 +14,10 @@ class AccessResource extends JsonResource
      */
     public function toArray($request)
     {
-        $res[] = [
-            "fullname" => (
-                $this->resource['user']['first_name'] . " " .
-                $this->resource['user']['last_name']
-            ),
-            "email" => $this->resource['user']['email'],
-            'type' => 'author',
+        return [
+            'name' => $this->user->fullname(),
+            'email' => $this->user->email,
+            'type' => $this->author ? 'author' : 'co-author'
         ];
-        foreach ($this->resource['accesses'] as $access) {
-            $res[] = [
-                "fullname" => (
-                    $access->user->first_name . " " .
-                    $access->user->last_name
-                ),
-                "email" => $access->user->email,
-                'type' => 'co-author',
-            ];
-        }
-        return $res;
     }
 }

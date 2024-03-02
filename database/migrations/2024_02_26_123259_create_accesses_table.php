@@ -5,31 +5,35 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration {
-  /**
-   * Run the migrations.
-   *
-   * @return void
-   */
-  public function up()
-  {
-    Schema::create('accesses', function (Blueprint $table) {
-      $table->id();
-      $table->unsignedBigInteger('user_id');
-      $table->unsignedBigInteger('file_id');
-      $table->timestamps();
+    /**
+     * Run the migrations.
+     *
+     * @return void
+     */
+    public function up()
+    {
+        Schema::create('accesses', function (Blueprint $table) {
+            $table->id();
+            /*
+             * конструкция foreignIdFor создает автоматически по названию твоего класса
+             * колонку формата CLASS_id => user_id или file_id и заменяет 2 операции:
+             * создание колонки через unsignedBigInteger и foreign
+             */
+            $table->foreignIdFor(\App\Models\User::class)->constrained()->cascadeOnDelete();
+            $table->foreignIdFor(\App\Models\File::class)->constrained()->cascadeOnDelete();
+            # Еще мы договорились что добавил поле автор
+            $table->boolean('author')->default(false);
+            $table->timestamps();
+        });
+    }
 
-      $table->foreign('user_id')->references('id')->on('users');
-      $table->foreign('file_id')->references('id')->on('files');
-    });
-  }
-
-  /**
-   * Reverse the migrations.
-   *
-   * @return void
-   */
-  public function down()
-  {
-    Schema::dropIfExists('accesses');
-  }
+    /**
+     * Reverse the migrations.
+     *
+     * @return void
+     */
+    public function down()
+    {
+        Schema::dropIfExists('accesses');
+    }
 };

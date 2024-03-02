@@ -2,42 +2,40 @@
 
 namespace App\Http\Requests;
 
-use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
 use Illuminate\Http\JsonResponse;
 
 class AccessRequest extends FormRequest
 {
-  /**
-   * Determine if the user is authorized to make this request.
-   *
-   * @return bool
-   */
-  public function authorize()
-  {
-    return true;
-  }
+    use ValidationTrait;
 
-  /**
-   * Get the validation rules that apply to the request.
-   *
-   * @return array<string, mixed>
-   */
-  public function rules()
-  {
-    return [
-      "email" => "required|email",
-    ];
-  }
+    public function authorize()
+    {
+        $user = auth()->user();
+        return $this->file->access()->where([
+            'author' => 1,
+            'user_id' => $user->id
+        ])->exists() && $user->email != $this->request->get('email', null);
+    }
 
-  protected function failedValidation(Validator $validator)
-  {
-    $errors = $validator->errors()->toArray();
-    $response = new JsonResponse([
-      'success' => false,
-      'message' => $errors,
-    ], 422);
-    throw new HttpResponseException($response);
-  }
+    protected function failedAuthorization()
+    {
+        $response = new JsonResponse([
+            "message" => "Forbidden for you",
+        ], 403);
+        throw new HttpResponseException($response);
+    }
+
+    /**
+     * Get the validation rules that apply to the request.
+     *
+     * @return array<string, mixed>
+     */
+    public function rules()
+    {
+        return [
+            "email" => "required|email|exists:users",
+        ];
+    }
 }
